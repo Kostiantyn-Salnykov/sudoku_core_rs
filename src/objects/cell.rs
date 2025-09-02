@@ -66,7 +66,8 @@ impl Cell {
         T: Candidate,
     {
         let items_to_remove = values.to_candidates();
-        self.candidates.retain(|item| !items_to_remove.contains(item));
+        self.candidates
+            .retain(|item| !items_to_remove.contains(item));
         if self.candidates.len() == 1 {
             self.value = Some(self.candidates[0]);
             true
@@ -76,7 +77,7 @@ impl Cell {
     }
 
     pub fn exclude_value(&mut self, value: u8) -> bool {
-        self.candidates.retain(|&v|v != value);
+        self.candidates.retain(|&v| v != value);
         if self.candidates.len() == 1 {
             self.value = Some(self.candidates[0]);
             true
@@ -175,7 +176,7 @@ mod tests {
     #[rstest]
     #[case::one(1)]
     #[case::nine(9)]
-    fn test_set_value(#[case] input: u8) {
+    fn test_set_value_ignored(#[case] input: u8) {
         let fake_value = 1;
 
         let mut cell = Cell::new(1, Some(fake_value), vec![input]);
@@ -184,14 +185,48 @@ mod tests {
         assert_eq!(cell.get_value(), Some(fake_value));
     }
 
+    #[test]
+    fn test_set_value_ignored_none() {
+        let mut cell = Cell::new(1, None, (1..9).collect());
+
+        cell.set_value(None);
+
+        assert_eq!(cell.get_value(), None);
+    }
+
     #[rstest]
     #[case::one(1)]
     #[case::nine(9)]
-    fn test_set_value_none(#[case] input: u8) {
+    fn test_set_value_none_ignored(#[case] input: u8) {
         let mut cell = Cell::new(1, Some(input), vec![input]);
 
         cell.set_value(None);
 
         assert_eq!(cell.value, Some(input));
+    }
+
+    #[rstest]
+    #[case::one(1)]
+    #[case::nine(6)]
+    fn test_set_value(#[case] input: u8) {
+        let mut cell = Cell::new(1, None, vec![input]);
+
+        cell.set_value(Some(input));
+
+        assert_eq!(cell.value, Some(input));
+    }
+
+    #[test]
+    fn test_latest_candidate() {
+        let expected_value = 1;
+        let fake_variants = vec![expected_value, 2, 3, 4];
+
+        let mut cell = Cell::new(1, None, fake_variants);
+
+        assert_eq!(cell.get_value(), None);
+
+        cell.exclude_values(vec![2, 3, 4].clone());
+
+        assert_eq!(cell.get_value(), Some(expected_value));
     }
 }
