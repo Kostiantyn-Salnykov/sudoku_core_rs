@@ -1,0 +1,231 @@
+@startuml
+left to right direction
+'skinparam linetype polyline
+skinparam dpi 100
+set namespaceSeparator /
+skinparam class {
+    stereotypeCBackgroundColor #9BBB59
+    circledCharacter S 
+}
+
+skinparam interface {
+    stereotypeCBackgroundColor #4F81BD
+    ArrowColor Blue
+}
+
+skinparam enum {
+    stereotypeCBackgroundColor #F79646
+}
+
+package "objects" <<Frame>> {
+    package "cell.rs" <<Frame>> {
+        +class Cell <<Struct>> {
+            --Fields--
+            -id: usize
+            -value: Option<u8>
+            -possible_values: Vec<u8>
+            -excluded_values: Vec<u8>
+            -row: Weak<RefCell<Line>>
+            -column: Weak<RefCell<Line>>
+            -area: Weak<RefCell<Area>>
+            ==Methods==
+            +new(id: usize, value: Option<u8>, possible_values: Vec<u8>) -> Cell
+            +set_value(&mut self, value: Option<u8>) -> bool
+            +value(&self) -> Option<u8>
+            --Associations--
+            +assign_to_row(&mut self, row: Weak<RefCell<Line>>) -> ()
+            +assign_to_column(&mut self, row: Weak<RefCell<Line>>) -> ()
+            +assign_to_area(&mut self, row: Weak<RefCell<Area>>) -> ()
+        }
+    }
+
+    package "line.rs" <<Frame>> {
+        +class Line <<Struct>> {
+            --Fields--
+            -id: usize
+            -alignment: Alignment
+            -cells: Vec<Rc<RefCell<Cell>>>
+            ==Methods==
+            +new(id: usize, alignment: Alignment, cells: Vec<Rc<RefCell<Cell>>>) -> Line
+            +solved_cells(&self) -> Vec<Rc<RefCell<Cell>>>
+            +unsolved_cells(&self) -> Vec<Rc<RefCell<Cell>>>
+            +cells(&self) -> &Vec<Rc<RefCell<Cell>>>
+        }
+
+        +enum Alignment <<Enum>> {
+            Row
+            Column
+        }
+    }
+
+    package "area.rs" <<Frame>> {
+        +class Area <<Struct>> {
+            --Fields--
+            -id: usize
+            -cells: Vec<Rc<RefCell<Cell>>>
+            ==Methods==
+            +new(id: usize, cells: Vec<Rc<RefCell<Cell>>>) -> Area
+        }
+    }
+
+    package "sudoku.rs" <<Frame>> {
+        +class Sudoku9x9 <<Struct>> {
+            --Constants--
+            -LENGTH: usize = 9
+            -NUMBER_OF_COLS_IN_AREA: usize = 3
+            -NUMBER_OF_ROWS_IN_AREA: usize = 3
+            --Fields--
+            -cells: Vec<Rc<RefCell<Cell>>>
+            -rows: Vec<Rc<RefCell<Line>>>
+            -columns: Vec<Rc<RefCell<Line>>>
+            -areas: Vec<Rc<RefCell<Area>>>
+            ==Methods==
+            +areas(&self) -> &Vec<Rc<RefCell<Area>>>
+        }
+    }
+}
+
+package "solver.rs" <<Frame>> {
+    +class SudokuSolver <<Struct>> {
+        --Fields--
+        -sudoku: &'a mut S
+        -strategies: Vec<Box<dyn Strategy<S>>>
+        ==Methods==
+        +new(sudoku: &'a mut S) -> Self
+        +solve(&mut self)
+        +add_strategy(&mut self, strategy: Box<dyn Strategy<S>>)
+    }
+}
+package "strategies" <<Frame>> {
+    +class LastPossibleNumber <<Struct>> {
+        ==Methods==
+        +run(&self, sudoku: &mut S)
+    }
+    +class ExcludedFromSiblingsInRow <<Struct>> {
+        ==Methods==
+        +run(&self, sudoku: &mut S)
+    }
+    +class ExcludedFromSiblingsInColumn <<Struct>> {
+        ==Methods==
+        +run(&self, sudoku: &mut S)
+    }
+    +class ExcludedFromSiblingsInArea <<Struct>> {
+        ==Methods==
+        +run(&self, sudoku: &mut S)
+    }
+}
+
+package "traits.rs" <<Frame>> {
+    +interface HasCells <<Trait>> {
+        ==Methods==
+        +cells(&self) -> &Vec<Rc<RefCell<Cell>>>
+    }
+
+    +interface HasRows <<Trait>> {
+        ==Methods==
+        +rows(&self) -> &Vec<Rc<RefCell<Line>>>
+    }
+
+    +interface HasColumns <<Trait>> {
+        ==Methods==
+        +columns(&self) -> &Vec<Rc<RefCell<Line>>>
+    }
+
+    +interface HasAreas <<Trait>> {
+        ==Methods==
+        +areas(&self) -> &Vec<Rc<RefCell<Line>>>
+    }
+
+    +interface Identifiable <<Trait>> {
+        ==Methods==
+        +id(&self) -> usize
+    }
+
+    +interface Solvable <<Trait>> {
+        ==Methods==
+        +is_solved(&self) -> bool
+    }
+
+    +interface SolveMetrics <<Trait>> {
+        ==Methods==
+        +unsolved_cells(&self) -> Vec<Rc<RefCell<Cell>>>
+        +solved_cells(&self) -> Vec<Rc<RefCell<Cell>>>
+        +count_solved_cells(&self) -> usize
+        +count_solved_percentage(&self) -> f64
+    }
+
+    +interface SudokuConfig <<Trait>> {
+        --Constants--
+        +LENGTH: usize
+        +NUMBER_OF_COLS: usize
+        +NUMBER_OF_ROWS: usize
+        +NUMBER_OF_COLS_IN_AREA: usize
+        +NUMBER_OF_ROWS_IN_AREA: usize
+        ==Methods==
+        +total_numbers_of_cells() -> usize
+        +number_cells_in_area() -> usize
+        +number_of_areas() -> usize
+    }
+
+    +interface SimpleSudoku <<Trait>> {
+        ==Methods==
+        +populate_cells(data: &Vec<Vec<Option<u8>>>) -> Vec<Rc<RefCell<Cell>>>
+        +populate_rows(cells: &[Rc<RefCell<Cell>>]) -> Vec<Rc<RefCell<Line>>>
+        +populate_columns(cells: &[Rc<RefCell<Cell>>]) -> Vec<Rc<RefCell<Line>>>
+        +populate_areas(cells: &[Rc<RefCell<Cell>>]) -> Vec<Rc<RefCell<Area>>>
+        +new(data: Vec<Vec<Option<u8>>>) -> Self
+        +display_cells_ids(&self)
+        +display_rows_ids(&self)
+        +display_column_ids(&self)
+        +display_areas_ids(&self)
+        +display_rows(&self)
+        +display_columns(&self)
+    }
+
+    +interface Strategy{
+        ==Methods==
+        +run(&self, sudoku: &mut S) -> ()
+    }
+}
+
+
+Identifiable::id <|.. Cell #line:dodgerblue
+Identifiable::id <|.. Line #line:dodgerblue
+Identifiable::id <|.. Area #line:dodgerblue
+HasCells::cells <|.. Line #line:dodgerblue
+HasCells::cells <|.. Area #line:dodgerblue
+Solvable <|.. Cell #line:purple
+Solvable <|.. Line #line:purple
+Solvable <|.. Area #line:purple
+
+HasCells::cells <|-- SolveMetrics
+HasCells <|-- Solvable
+SudokuConfig <|-- SimpleSudoku
+SolveMetrics <|-- SimpleSudoku
+HasRows::rows <|-- SimpleSudoku
+HasColumns::columns <|-- SimpleSudoku
+HasAreas::areas <|-- SimpleSudoku
+
+SimpleSudoku <|.. Sudoku9x9 #line:dodgerblue : "implements"
+Strategy <|.. LastPossibleNumber #line:dodgerblue
+Strategy <|.. ExcludedFromSiblingsInRow #line:dodgerblue
+Strategy <|.. ExcludedFromSiblingsInColumn #line:dodgerblue
+Strategy <|.. ExcludedFromSiblingsInArea #line:dodgerblue
+
+Line::cells *--> Cell::row
+Line::cells *--> Cell::column
+Area::cells *--> Cell::area
+
+Sudoku9x9::cells *-- Cell
+Sudoku9x9::rows *-- Line
+Sudoku9x9::columns *-- Line
+Sudoku9x9::areas *-- Area
+Alignment --* Line::alignment
+SudokuSolver::strategies ..> Strategy : "uses"
+SudokuSolver::sudoku ..o SimpleSudoku : "has"
+
+
+hide interface fields
+show SudokuConfig fields
+hide enum methods
+@enduml
