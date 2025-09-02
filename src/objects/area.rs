@@ -1,6 +1,6 @@
 use crate::helpers::has_duplicate_values;
 use crate::objects::cell::Cell;
-use crate::traits::{HasCells, Identifiable};
+use crate::traits::{HasCells, Identifiable, Solvable};
 use std::cell::RefCell;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -18,9 +18,11 @@ impl Area {
         }
         Area { id, cells }
     }
+}
 
-    pub fn is_solved(&self) -> bool {
-        self.cells().iter().all(|cell| cell.borrow().is_solved())
+impl Solvable for Area {
+    fn is_solved(&self) -> bool {
+        self.cells.iter().all(|cell| cell.borrow().is_solved())
     }
 }
 
