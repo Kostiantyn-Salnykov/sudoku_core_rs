@@ -50,7 +50,7 @@ impl<S: SimpleSudoku> Strategy<S> for LastPossibleNumberStrategy {
                 {
                     let mut current_cell = cell_ref.borrow_mut();
                     let solved_before = current_cell.is_solved();
-                    current_cell.remove_from_variants(items_to_remove);
+                    current_cell.exclude_values(items_to_remove);
 
                     if solved_before != current_cell.is_solved() {
                         progress_made = true;

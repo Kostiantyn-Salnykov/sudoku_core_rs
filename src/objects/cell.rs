@@ -1,6 +1,6 @@
 use crate::objects::area::Area;
 use crate::objects::line::Line;
-use crate::objects::traits::ToVariants;
+use crate::objects::traits::Candidate;
 use crate::traits::Identifiable;
 use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
@@ -10,7 +10,7 @@ use std::rc::Weak;
 pub struct Cell {
     id: usize,
     value: Option<u8>,
-    variants: Vec<u8>,
+    candidates: Vec<u8>,
     row: Weak<RefCell<Line>>,
     column: Weak<RefCell<Line>>,
     area: Weak<RefCell<Area>>,
@@ -21,7 +21,7 @@ impl Cell {
         Cell {
             id,
             value,
-            variants,
+            candidates: variants,
             row: Weak::new(),
             column: Weak::new(),
             area: Weak::new(),
@@ -35,7 +35,7 @@ impl Cell {
         }
 
         self.value = value;
-        self.variants = match value {
+        self.candidates = match value {
             Some(val) => vec![val],
             None => (1..=9).collect(),
         };
@@ -61,14 +61,24 @@ impl Cell {
         self.value.is_some()
     }
 
-    pub fn remove_from_variants<T>(&mut self, items: T) -> bool
+    pub fn exclude_values<T>(&mut self, values: T) -> bool
     where
-        T: ToVariants,
+        T: Candidate,
     {
-        let items_to_remove = items.to_variants();
-        self.variants.retain(|item| !items_to_remove.contains(item));
-        if self.variants.len() == 1 {
-            self.value = Some(self.variants[0]);
+        let items_to_remove = values.to_candidates();
+        self.candidates.retain(|item| !items_to_remove.contains(item));
+        if self.candidates.len() == 1 {
+            self.value = Some(self.candidates[0]);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn exclude_value(&mut self, value: u8) -> bool {
+        self.candidates.retain(|&v|v != value);
+        if self.candidates.len() == 1 {
+            self.value = Some(self.candidates[0]);
             true
         } else {
             false
@@ -76,7 +86,7 @@ impl Cell {
     }
 
     pub fn variants(&self) -> Vec<u8> {
-        self.variants.clone()
+        self.candidates.clone()
     }
 
     pub fn row(&self) -> Weak<RefCell<Line>> {
@@ -136,7 +146,7 @@ mod tests {
 
         assert_eq!(cell.id, 1);
         assert_eq!(cell.value, Some(input));
-        assert_eq!(cell.variants, expected_variants);
+        assert_eq!(cell.candidates, expected_variants);
         assert!(cell.is_solved());
     }
 
@@ -148,7 +158,7 @@ mod tests {
 
         assert_eq!(cell.id, 1);
         assert_eq!(cell.value, None);
-        assert_eq!(cell.variants, fake_variants);
+        assert_eq!(cell.candidates, fake_variants);
         assert!(!cell.is_solved());
     }
 

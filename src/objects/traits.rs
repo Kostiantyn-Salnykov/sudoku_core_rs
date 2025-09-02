@@ -1,23 +1,23 @@
 use std::collections::HashSet;
 
-pub trait ToVariants {
-    fn to_variants(&self) -> Vec<u8>;
+pub trait Candidate {
+    fn to_candidates(&self) -> Vec<u8>;
 }
 
-impl ToVariants for u8 {
-    fn to_variants(&self) -> Vec<u8> {
+impl Candidate for u8 {
+    fn to_candidates(&self) -> Vec<u8> {
         vec![*self]
     }
 }
 
-impl ToVariants for Vec<u8> {
-    fn to_variants(&self) -> Vec<u8> {
+impl Candidate for Vec<u8> {
+    fn to_candidates(&self) -> Vec<u8> {
         self.clone()
     }
 }
 
-impl ToVariants for HashSet<u8> {
-    fn to_variants(&self) -> Vec<u8> {
+impl Candidate for HashSet<u8> {
+    fn to_candidates(&self) -> Vec<u8> {
         self.iter().copied().collect()
     }
 }
