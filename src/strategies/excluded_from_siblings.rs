@@ -53,7 +53,7 @@ fn apply_excluded_from_siblings_strategy<S: SimpleSudoku>(
             let ref_line = rc_refcell_of_line.borrow();
 
             for number in 1..=S::LENGTH as u8 {
-                // Якщо число вже є в лінії, пропускаємо
+                // If value is already set, skip.
                 if ref_line
                     .cells()
                     .iter()
@@ -62,7 +62,7 @@ fn apply_excluded_from_siblings_strategy<S: SimpleSudoku>(
                     continue;
                 }
 
-                // Знаходимо клітинки, в яких можливе це число
+                // Possible cells that can have this value.
                 let possible_cells: Vec<_> = ref_line
                     .cells()
                     .iter()
@@ -73,7 +73,7 @@ fn apply_excluded_from_siblings_strategy<S: SimpleSudoku>(
                     .cloned()
                     .collect();
 
-                // Якщо залишилась тільки одна можлива клітинка
+                // Only one cell can have this value, so we can set it directly.
                 if possible_cells.len() == 1 {
                     let mut cell = possible_cells[0].borrow_mut();
                     if cell.set_value(Some(number)) {
@@ -86,7 +86,7 @@ fn apply_excluded_from_siblings_strategy<S: SimpleSudoku>(
             }
         }
 
-        // Якщо прогресу немає → завершуємо
+        // No progress was made, so we can stop the loop.
         if !progress_made {
             break;
         }
