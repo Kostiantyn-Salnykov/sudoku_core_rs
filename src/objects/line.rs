@@ -101,13 +101,8 @@ mod tests {
     #[test]
     fn test_is_solved_true() {
         let mut cells = Vec::with_capacity(9);
-        let variants = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
         for val in 1..=9 {
-            cells.push(Rc::new(RefCell::new(Cell::new(
-                val,
-                Some(val as u8),
-                variants.clone(),
-            ))))
+            cells.push(Rc::new(RefCell::new(Cell::new(val, Some(val as u8)))))
         }
         let line = Line {
             id: 1,

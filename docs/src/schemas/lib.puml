@@ -34,8 +34,8 @@ package "objects" <<Frame>> {
             +value(&self) -> Option<u8>
             --Associations--
             +assign_to_row(&mut self, row: Weak<RefCell<Line>>) -> ()
-            +assign_to_column(&mut self, row: Weak<RefCell<Line>>) -> ()
-            +assign_to_area(&mut self, row: Weak<RefCell<Area>>) -> ()
+            +assign_to_column(&mut self, column: Weak<RefCell<Line>>) -> ()
+            +assign_to_area(&mut self, area: Weak<RefCell<Area>>) -> ()
         }
     }
 
@@ -133,7 +133,7 @@ package "traits.rs" <<Frame>> {
 
     +interface HasAreas <<Trait>> {
         ==Methods==
-        +areas(&self) -> &Vec<Rc<RefCell<Line>>>
+        +areas(&self) -> &Vec<Rc<RefCell<Area>>>
     }
 
     +interface Identifiable <<Trait>> {

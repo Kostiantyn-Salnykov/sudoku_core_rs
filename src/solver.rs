@@ -40,11 +40,18 @@ where
         info!("Solver started.");
         let start_ts = Utc::now();
         'main: loop {
+            let before_solve_count = self.sudoku.count_solved_cells();
+
             for strategy in &self.strategies {
                 strategy.run(self.sudoku);
                 if self.sudoku.is_solved() {
                     break 'main;
                 }
+            }
+
+            let after_solve_count = self.sudoku.count_solved_cells();
+            if before_solve_count == after_solve_count {
+                break 'main;
             }
         }
         let end_ts = Utc::now();

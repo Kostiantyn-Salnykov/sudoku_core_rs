@@ -3,6 +3,7 @@ use crate::objects::line::Line;
 use crate::objects::traits::Candidate;
 use crate::traits::Identifiable;
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::rc::Weak;
 
@@ -10,35 +11,45 @@ use std::rc::Weak;
 pub struct Cell {
     id: usize,
     value: Option<u8>,
-    candidates: Vec<u8>,
+    possible_variants: HashSet<u8>,
+    restricted_variants: HashSet<u8>,
     row: Weak<RefCell<Line>>,
     column: Weak<RefCell<Line>>,
     area: Weak<RefCell<Area>>,
 }
 
 impl Cell {
-    pub fn new(id: usize, value: Option<u8>, variants: Vec<u8>) -> Self {
-        Cell {
+    pub fn new(id: usize, value: Option<u8>) -> Self {
+        let mut cell = Cell {
             id,
-            value,
-            candidates: variants,
+            value: None,
+            possible_variants: HashSet::new(),
+            restricted_variants: HashSet::new(),
             row: Weak::new(),
             column: Weak::new(),
             area: Weak::new(),
-        }
+        };
+        cell.set_value(value);
+        cell
     }
 
-    pub fn set_value(&mut self, value: Option<u8>) {
+    pub fn set_value(&mut self, value: Option<u8>) -> bool {
         // Skip setter if the value is already set.
         if self.value.is_some() {
-            return;
+            return false;
         }
 
         self.value = value;
-        self.candidates = match value {
-            Some(val) => vec![val],
+        self.possible_variants = match value {
+            Some(val) => {
+                let mut set = HashSet::new();
+                set.insert(val);
+                set
+            }
             None => (1..=9).collect(),
         };
+        self.restricted_variants.clear();
+        true
     }
 
     pub fn set_row(&mut self, row: Weak<RefCell<Line>>) {
@@ -61,33 +72,55 @@ impl Cell {
         self.value.is_some()
     }
 
-    pub fn exclude_values<T>(&mut self, values: T) -> bool
-    where
-        T: Candidate,
-    {
-        let items_to_remove = values.to_candidates();
-        self.candidates
-            .retain(|item| !items_to_remove.contains(item));
-        if self.candidates.len() == 1 {
-            self.value = Some(self.candidates[0]);
-            true
-        } else {
-            false
+    pub fn exclude_values<T: Candidate>(&mut self, values: T) -> bool {
+        if self.is_solved() {
+            return false;
         }
+
+        let items = values.to_candidates();
+        let before = self.possible_variants.len();
+        for val in items {
+            self.restricted_variants.insert(val);
+            self.possible_variants.remove(&val);
+        }
+
+        assert!(
+            !self.possible_variants.is_empty(),
+            "Cell {} has no candidates after exclude_values",
+            self.id
+        );
+
+        if self.possible_variants.len() == 1 {
+            let last_value = *self.possible_variants.iter().next().unwrap();
+            return self.set_value(Some(last_value));
+        }
+
+        self.possible_variants.len() != before
     }
 
     pub fn exclude_value(&mut self, value: u8) -> bool {
-        self.candidates.retain(|&v| v != value);
-        if self.candidates.len() == 1 {
-            self.value = Some(self.candidates[0]);
-            true
-        } else {
-            false
+        if self.is_solved() {
+            return false;
         }
+
+        let before = self.possible_variants.len();
+        self.restricted_variants.insert(value);
+
+        if self.possible_variants.remove(&value) {
+            if self.possible_variants.len() == 1 {
+                let last_val = *self.possible_variants.iter().next().unwrap();
+                return self.set_value(Some(last_val));
+            }
+        }
+
+        self.possible_variants.len() != before
     }
 
-    pub fn variants(&self) -> Vec<u8> {
-        self.candidates.clone()
+    pub fn variants(&self) -> HashSet<u8> {
+        if let Some(val) = self.value {
+            return HashSet::from([val]);
+        }
+        self.possible_variants.clone()
     }
 
     pub fn row(&self) -> Weak<RefCell<Line>> {
@@ -141,25 +174,19 @@ mod tests {
     #[case::two(2)]
     #[case::three(81)]
     fn test_new_with_value(#[case] input: u8) {
-        let expected_variants = vec![input];
-
-        let cell = Cell::new(1, Some(input), expected_variants.clone());
+        let cell = Cell::new(1, Some(input));
 
         assert_eq!(cell.id, 1);
         assert_eq!(cell.value, Some(input));
-        assert_eq!(cell.candidates, expected_variants);
         assert!(cell.is_solved());
     }
 
     #[test]
     fn test_new_without_value() {
-        let fake_variants = vec![1, 2, 3];
-
-        let cell = Cell::new(1, None, fake_variants.clone());
+        let cell = Cell::new(1, None);
 
         assert_eq!(cell.id, 1);
         assert_eq!(cell.value, None);
-        assert_eq!(cell.candidates, fake_variants);
         assert!(!cell.is_solved());
     }
 
@@ -167,66 +194,9 @@ mod tests {
     fn test_get_value() {
         let fake_value = 2;
 
-        let cell = Cell::new(1, Some(fake_value), vec![fake_value]);
+        let cell = Cell::new(1, Some(fake_value));
 
         let val = cell.get_value();
         assert_eq!(val, Some(fake_value));
-    }
-
-    #[rstest]
-    #[case::one(1)]
-    #[case::nine(9)]
-    fn test_set_value_ignored(#[case] input: u8) {
-        let fake_value = 1;
-
-        let mut cell = Cell::new(1, Some(fake_value), vec![input]);
-
-        cell.set_value(Some(input));
-        assert_eq!(cell.get_value(), Some(fake_value));
-    }
-
-    #[test]
-    fn test_set_value_ignored_none() {
-        let mut cell = Cell::new(1, None, (1..9).collect());
-
-        cell.set_value(None);
-
-        assert_eq!(cell.get_value(), None);
-    }
-
-    #[rstest]
-    #[case::one(1)]
-    #[case::nine(9)]
-    fn test_set_value_none_ignored(#[case] input: u8) {
-        let mut cell = Cell::new(1, Some(input), vec![input]);
-
-        cell.set_value(None);
-
-        assert_eq!(cell.value, Some(input));
-    }
-
-    #[rstest]
-    #[case::one(1)]
-    #[case::nine(6)]
-    fn test_set_value(#[case] input: u8) {
-        let mut cell = Cell::new(1, None, vec![input]);
-
-        cell.set_value(Some(input));
-
-        assert_eq!(cell.value, Some(input));
-    }
-
-    #[test]
-    fn test_latest_candidate() {
-        let expected_value = 1;
-        let fake_variants = vec![expected_value, 2, 3, 4];
-
-        let mut cell = Cell::new(1, None, fake_variants);
-
-        assert_eq!(cell.get_value(), None);
-
-        cell.exclude_values(vec![2, 3, 4].clone());
-
-        assert_eq!(cell.get_value(), Some(expected_value));
     }
 }

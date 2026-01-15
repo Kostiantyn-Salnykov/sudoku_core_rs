@@ -92,12 +92,7 @@ pub trait SimpleSudoku:
                 let id = row_num * Self::NUMBER_OF_ROWS + col_num + 1;
                 // Grab cell value from data.
                 let value = data[row_num][col_num];
-                // Populate variants for cell.
-                let variants = match value {
-                    Some(val) => vec![val],
-                    None => (1..=Self::LENGTH as u8).collect(),
-                };
-                cells.push(Rc::new(RefCell::new(Cell::new(id, value, variants))));
+                cells.push(Rc::new(RefCell::new(Cell::new(id, value))));
             }
         }
         cells
@@ -125,7 +120,7 @@ pub trait SimpleSudoku:
         for col_idx in 1..=Self::NUMBER_OF_COLS {
             let mut col_cells = Vec::with_capacity(Self::NUMBER_OF_COLS);
             for row in 0..Self::NUMBER_OF_ROWS {
-                let idx = row * Self::NUMBER_OF_ROWS + (col_idx - 1);
+                let idx = row * Self::NUMBER_OF_COLS + (col_idx - 1);
                 col_cells.push(cells[idx].clone());
             }
             columns.push(Rc::new(RefCell::new(Line::new(

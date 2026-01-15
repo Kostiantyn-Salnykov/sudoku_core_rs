@@ -11,3 +11,7 @@ pre: fmt test
 
 tree:
 	cargo tree
+
+
+book:
+    mdbook server docs
