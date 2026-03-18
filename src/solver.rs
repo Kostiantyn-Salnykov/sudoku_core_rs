@@ -1,3 +1,7 @@
+use crate::strategies::{
+    BacktrackingStrategy, ConstraintPropagationStrategy, HiddenSingleInColumnStrategy,
+    HiddenSingleInRowStrategy,
+};
 use crate::traits::{SimpleSudoku, Strategy};
 use chrono::Utc;
 use std::fmt::Display;
@@ -85,5 +89,19 @@ where
         );
         self.print_is_solved();
         info!("{:#}", self.sudoku);
+    }
+
+    pub fn with_defaults(sudoku: &'a mut S) -> Self {
+        let mut solver = Self::new(sudoku);
+        solver.add_strategy(Box::new(ConstraintPropagationStrategy));
+        solver.add_strategy(Box::new(HiddenSingleInRowStrategy));
+        solver.add_strategy(Box::new(HiddenSingleInColumnStrategy));
+        solver.set_backtracking_strategy(Box::new(BacktrackingStrategy));
+        solver
+    }
+
+    pub fn solve_with_defaults(sudoku: &'a mut S) {
+        let mut solver = Self::with_defaults(sudoku);
+        solver.solve();
     }
 }

@@ -43,17 +43,23 @@ fn main() {
     }
 
     let mut sudoku = Sudoku9x9::new(data2);
-    sudoku.display_columns_ids();
+    // Possible displays for debugging.
+    // sudoku.display_columns_ids();
+    // sudoku.display_cells_ids();
+    // sudoku.display_column_ids();
+    // sudoku.display_rows_ids();
+    // sudoku.display_area_ids();
+
+    // Full setup usage for Solver.
     let mut solver = Solver::new(&mut sudoku);
     solver.add_strategy(Box::new(ConstraintPropagationStrategy));
     solver.add_strategy(Box::new(HiddenSingleInRowStrategy));
     solver.add_strategy(Box::new(HiddenSingleInColumnStrategy));
     solver.set_backtracking_strategy(Box::new(BacktrackingStrategy));
     solver.solve();
-    // sudoku.display_cells_ids();
-    // sudoku.display_column_ids();
-    // sudoku.display_rows_ids();
-    // sudoku.display_area_ids();
+
+    // Simple usage of Solver.
+    // Solver::solve_with_defaults(&mut sudoku);
 
     // let data_solved = load_csv("fixtures/average_solved.csv");
     let data_solved = load_csv("fixtures/hard_1_solved.csv");
