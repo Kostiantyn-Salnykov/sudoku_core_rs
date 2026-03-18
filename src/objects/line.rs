@@ -49,6 +49,33 @@ impl Line {
             .cloned()
             .collect()
     }
+
+    /// Get all solved values in this line
+    pub fn solved_values(&self) -> Vec<u8> {
+        self.cells
+            .iter()
+            .filter_map(|cell| cell.borrow().get_value())
+            .collect()
+    }
+
+    /// Check if a value exists in this line
+    pub fn has_value(&self, value: u8) -> bool {
+        self.cells
+            .iter()
+            .any(|cell| cell.borrow().get_value() == Some(value))
+    }
+
+    /// Get cells that can have this value (unsolved cells with this candidate)
+    pub fn cells_with_candidate(&self, value: u8) -> Vec<Rc<RefCell<Cell>>> {
+        self.cells
+            .iter()
+            .filter(|cell| {
+                let cell_ref = cell.borrow();
+                !cell_ref.is_solved() && cell_ref.has_candidate(value)
+            })
+            .cloned()
+            .collect()
+    }
 }
 
 impl Display for Line {

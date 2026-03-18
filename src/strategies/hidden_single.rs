@@ -1,48 +1,47 @@
-
 use crate::objects::line::Line;
-use crate::traits::{HasCells, SimpleSudoku, Strategy};
+use crate::traits::{SimpleSudoku, Strategy};
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::rc::Rc;
-use tracing::debug;
+use tracing::{debug, info};
 
 #[derive(Debug)]
-pub struct ExcludedFromSiblingsInRow;
+pub struct HiddenSingleInRowStrategy;
 
-impl Display for ExcludedFromSiblingsInRow {
+impl Display for HiddenSingleInRowStrategy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ExcludedFromSiblingsInRow")
+        write!(f, "HiddenSingleInRowStrategy")
     }
 }
 
-impl<S: SimpleSudoku> Strategy<S> for ExcludedFromSiblingsInRow {
+impl<S: SimpleSudoku> Strategy<S> for HiddenSingleInRowStrategy {
     fn run(&self, sudoku: &mut S) {
-        debug!("{}: started.", self);
+        info!("{}: started.", self);
         let lines = sudoku.rows();
-        apply_excluded_from_siblings_strategy::<S>(lines.to_vec(), self);
+        apply_hidden_single_strategy::<S>(lines.to_vec(), self);
         debug!("{}: completed.", self);
     }
 }
 
 #[derive(Debug)]
-pub struct ExcludedFromSiblingsInColumn;
+pub struct HiddenSingleInColumnStrategy;
 
-impl Display for ExcludedFromSiblingsInColumn {
+impl Display for HiddenSingleInColumnStrategy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ExcludedFromSiblingsInColumn")
+        write!(f, "HiddenSingleInColumnStrategy")
     }
 }
 
-impl<S: SimpleSudoku> Strategy<S> for ExcludedFromSiblingsInColumn {
+impl<S: SimpleSudoku> Strategy<S> for HiddenSingleInColumnStrategy {
     fn run(&self, sudoku: &mut S) {
-        debug!("{}: started.", self);
+        info!("{}: started.", self);
         let lines = sudoku.columns();
-        apply_excluded_from_siblings_strategy::<S>(lines.to_vec(), self);
+        apply_hidden_single_strategy::<S>(lines.to_vec(), self);
         debug!("{}: completed.", self);
     }
 }
 
-fn apply_excluded_from_siblings_strategy<S: SimpleSudoku>(
+fn apply_hidden_single_strategy<S: SimpleSudoku>(
     lines: Vec<Rc<RefCell<Line>>>,
     strategy: &impl Display,
 ) {
@@ -54,33 +53,21 @@ fn apply_excluded_from_siblings_strategy<S: SimpleSudoku>(
 
             for number in 1..=S::LENGTH as u8 {
                 // If value is already set, skip.
-                if ref_line
-                    .cells()
-                    .iter()
-                    .any(|c| c.borrow().get_value() == Some(number))
-                {
+                if ref_line.has_value(number) {
                     continue;
                 }
 
                 // Possible cells that can have this value.
-                let possible_cells: Vec<_> = ref_line
-                    .cells()
-                    .iter()
-                    .filter(|cell| {
-                        let ref_cell = cell.borrow();
-                        !ref_cell.is_solved() && ref_cell.variants().contains(&number)
-                    })
-                    .cloned()
-                    .collect();
+                let possible_cells = ref_line.cells_with_candidate(number);
 
                 // Only one cell can have this value, so we can set it directly.
                 if possible_cells.len() == 1 {
                     let mut cell = possible_cells[0].borrow_mut();
                     if cell.set_value(Some(number)) {
                         progress_made = true;
-                        debug!("{}: has solved the {}.", strategy, cell);
+                        debug!("{}: has solved the {:#}.", strategy, cell);
                     } else {
-                        debug!("{}: already solved {}.", strategy, cell);
+                        debug!("{}: already solved {:#}.", strategy, cell);
                     }
                 }
             }

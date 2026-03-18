@@ -8,8 +8,9 @@ use std::cell::RefCell;
 use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
+use std::str::FromStr;
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct Sudoku9x9 {
     cells: Vec<Rc<RefCell<Cell>>>,
     rows: Vec<Rc<RefCell<Line>>>,
@@ -98,5 +99,71 @@ impl Display for Sudoku9x9 {
             writeln!(f)?;
         }
         Ok(())
+    }
+}
+
+impl Sudoku9x9 {
+    fn parse_single_line(s: &str) -> Vec<Vec<Option<u8>>> {
+        // Accepts: "530070000600195000..." (0 OR . OR * for empty)
+        s.chars()
+            .filter_map(|ch| match ch {
+                '1'..='9' => Some(Some(ch as u8 - b'0')),
+                '0' | '.' | '*' => Some(None),
+                _ => None, // skip separators, whitespace, newlines
+            })
+            .collect::<Vec<_>>()
+            .chunks(Self::NUMBER_OF_COLS)
+            .map(|row| row.to_vec())
+            .collect()
+    }
+
+    fn parse_multi_line(s: &str) -> Vec<Vec<Option<u8>>> {
+        // Accepts:
+        // "5 3 . | . 7 . | . . .
+        //  6 . . | 1 9 5 | . . .
+        //  ------+-------+------"
+        s.lines()
+            .filter(|line| {
+                // Skip separator lines like "------+-------+------"
+                line.contains(|c: char| c.is_ascii_digit() || c == '.' || c == '*')
+            })
+            .map(|line| {
+                line.chars()
+                    .filter_map(|ch| match ch {
+                        '1'..='9' => Some(Some(ch as u8 - b'0')),
+                        '0' | '.' | '*' => Some(None),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+}
+
+#[derive(Debug)]
+pub enum SudokuParseError {
+    InvalidLength { expected: usize, got: usize },
+    InvalidCharacter(char),
+}
+
+impl FromStr for Sudoku9x9 {
+    type Err = SudokuParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let data = if s.contains('\n') {
+            Self::parse_multi_line(s)
+        } else {
+            Self::parse_single_line(s)
+        };
+
+        let total: usize = data.iter().map(|r| r.len()).sum();
+        if total != Self::total_number_of_cells() {
+            return Err(SudokuParseError::InvalidLength {
+                expected: Self::total_number_of_cells(),
+                got: total,
+            });
+        }
+
+        Ok(Self::new(data))
     }
 }

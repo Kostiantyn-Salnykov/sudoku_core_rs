@@ -3,7 +3,7 @@ use crate::objects::cell::Cell;
 use crate::objects::line::{Alignment, Line};
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::info;
+use tracing::trace;
 
 pub trait Identifiable {
     fn id(&self) -> usize;
@@ -87,7 +87,7 @@ pub trait SimpleSudoku:
     fn populate_cells(data: &[Vec<Option<u8>>]) -> Vec<Rc<RefCell<Cell>>> {
         let mut cells = Vec::with_capacity(Self::total_number_of_cells());
         for (row_num, _row) in data.iter().enumerate().take(Self::NUMBER_OF_ROWS) {
-            for col_num in 0..Self::NUMBER_OF_COLS {
+            for (col_num, _) in data.iter().enumerate().take(Self::NUMBER_OF_COLS) {
                 // Select id for cell.
                 let id = row_num * Self::NUMBER_OF_ROWS + col_num + 1;
                 // Grab cell value from data.
@@ -196,7 +196,7 @@ pub trait SimpleSudoku:
             .map(|cell| cell.borrow().id().to_string())
             .collect();
         for (idx, cell) in cells_ids.iter().enumerate() {
-            if idx % 9 == 0 && idx != 0 {
+            if idx % Self::NUMBER_OF_COLS == 0 && idx != 0 {
                 println!()
             }
 
@@ -211,31 +211,31 @@ pub trait SimpleSudoku:
 
     fn display_rows_ids(&self) {
         for row in self.rows() {
-            info!("{:#?}", row.borrow())
+            trace!("{:#?}", row.borrow())
         }
     }
 
     fn display_columns_ids(&self) {
         for column in self.columns() {
-            info!("{:#?}", column.borrow())
+            trace!("{:#?}", column.borrow())
         }
     }
 
     fn display_areas_ids(&self) {
         for area in self.areas() {
-            info!("{:#?}", area.borrow())
+            trace!("{:#?}", area.borrow())
         }
     }
 
     fn display_rows(&self) {
         for row in self.rows() {
-            info!("{}", row.borrow());
+            trace!("{}", row.borrow());
         }
     }
 
     fn display_columns(&self) {
         for column in self.columns() {
-            info!("{}", column.borrow());
+            trace!("{}", column.borrow());
         }
     }
 }

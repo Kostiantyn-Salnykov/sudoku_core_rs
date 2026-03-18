@@ -38,6 +38,53 @@ impl HasCells for Area {
     }
 }
 
+impl Area {
+    /// Get all solved cells in this area
+    pub fn solved_cells(&self) -> Vec<Rc<RefCell<Cell>>> {
+        self.cells
+            .iter()
+            .filter(|cell| cell.borrow().is_solved())
+            .cloned()
+            .collect()
+    }
+
+    /// Get all unsolved cells in this area
+    pub fn unsolved_cells(&self) -> Vec<Rc<RefCell<Cell>>> {
+        self.cells
+            .iter()
+            .filter(|cell| !cell.borrow().is_solved())
+            .cloned()
+            .collect()
+    }
+
+    /// Get all solved values in this area
+    pub fn solved_values(&self) -> Vec<u8> {
+        self.cells
+            .iter()
+            .filter_map(|cell| cell.borrow().get_value())
+            .collect()
+    }
+
+    /// Check if a value exists in this area
+    pub fn has_value(&self, value: u8) -> bool {
+        self.cells
+            .iter()
+            .any(|cell| cell.borrow().get_value() == Some(value))
+    }
+
+    /// Get cells that can have this value (unsolved cells with this candidate)
+    pub fn cells_with_candidate(&self, value: u8) -> Vec<Rc<RefCell<Cell>>> {
+        self.cells
+            .iter()
+            .filter(|cell| {
+                let cell_ref = cell.borrow();
+                !cell_ref.is_solved() && cell_ref.has_candidate(value)
+            })
+            .cloned()
+            .collect()
+    }
+}
+
 impl Debug for Area {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let cells_ids: Vec<String> = self

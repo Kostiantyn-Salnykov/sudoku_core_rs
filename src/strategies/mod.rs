@@ -1,5 +1,7 @@
-pub mod excluded_from_siblings;
-pub mod last_possible;
+pub mod backtracking;
+pub mod constraint_propagation;
+pub mod hidden_single;
 
-pub use excluded_from_siblings::*;
-pub use last_possible::*;
+pub use backtracking::*;
+pub use constraint_propagation::*;
+pub use hidden_single::*;

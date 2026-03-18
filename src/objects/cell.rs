@@ -1,11 +1,11 @@
 use crate::objects::area::Area;
 use crate::objects::line::Line;
 use crate::objects::traits::Candidate;
-use crate::traits::Identifiable;
+use crate::traits::{HasCells, Identifiable};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use std::rc::Weak;
+use std::rc::{Rc, Weak};
 
 #[derive(Debug)]
 pub struct Cell {
@@ -106,11 +106,9 @@ impl Cell {
         let before = self.possible_variants.len();
         self.restricted_variants.insert(value);
 
-        if self.possible_variants.remove(&value) {
-            if self.possible_variants.len() == 1 {
-                let last_val = *self.possible_variants.iter().next().unwrap();
-                return self.set_value(Some(last_val));
-            }
+        if self.possible_variants.remove(&value) && self.possible_variants.len() == 1 {
+            let last_val = *self.possible_variants.iter().next().unwrap();
+            return self.set_value(Some(last_val));
         }
 
         self.possible_variants.len() != before
@@ -133,6 +131,71 @@ impl Cell {
 
     pub fn area(&self) -> Weak<RefCell<Area>> {
         self.area.clone()
+    }
+
+    pub fn get_peers(&self) -> Vec<Rc<RefCell<Cell>>> {
+        let mut peer_ids = HashSet::new();
+        let mut peers = Vec::new();
+
+        let mut add_peers = |cells: &[Rc<RefCell<Cell>>]| {
+            for cell in cells {
+                let cell_id = cell.borrow().id();
+                if cell_id != self.id && peer_ids.insert(cell_id) {
+                    peers.push(Rc::clone(cell));
+                }
+            }
+        };
+
+        if let Some(row) = self.row.upgrade() {
+            add_peers(row.borrow().cells());
+        }
+
+        if let Some(col) = self.column.upgrade() {
+            add_peers(col.borrow().cells());
+        }
+
+        if let Some(area) = self.area.upgrade() {
+            add_peers(area.borrow().cells());
+        }
+
+        peers
+    }
+
+    pub fn get_solved_peers_values(&self) -> HashSet<u8> {
+        let mut values = HashSet::new();
+
+        let mut collect_values = |cells: &[Rc<RefCell<Cell>>]| {
+            for cell in cells {
+                let cell_borrow = cell.borrow();
+                if cell_borrow.id() != self.id
+                    && let Some(val) = cell_borrow.get_value()
+                {
+                    values.insert(val);
+                }
+            }
+        };
+
+        if let Some(row) = self.row.upgrade() {
+            collect_values(row.borrow().cells());
+        }
+
+        if let Some(col) = self.column.upgrade() {
+            collect_values(col.borrow().cells());
+        }
+
+        if let Some(area) = self.area.upgrade() {
+            collect_values(area.borrow().cells());
+        }
+
+        values
+    }
+
+    pub fn has_candidate(&self, value: u8) -> bool {
+        self.possible_variants.contains(&value)
+    }
+
+    pub fn candidate_count(&self) -> usize {
+        self.possible_variants.len()
     }
 }
 
