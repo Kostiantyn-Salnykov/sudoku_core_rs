@@ -8,22 +8,22 @@ struct BacktrackState {
     values: Vec<Option<u8>>,
     candidates: Vec<HashSet<u8>>,
     peers: Vec<Vec<usize>>, // precomputed once
-    total_cells: usize,
+    total_slots: usize,
 }
 
 impl BacktrackState {
     fn from_sudoku<S: SimpleSudoku>(sudoku: &S) -> Self {
-        let total_cells = S::total_number_of_cells();
+        let total_slots = S::total_number_of_slots();
 
         // Extract flat state from your Rc<RefCell<>> graph
-        let mut values = vec![None; total_cells];
-        let mut candidates = vec![HashSet::new(); total_cells];
+        let mut values = vec![None; total_slots];
+        let mut candidates = vec![HashSet::new(); total_slots];
 
-        for cell in sudoku.cells() {
-            let cell = cell.borrow();
-            let idx = cell.id() - 1;
-            values[idx] = cell.get_value();
-            candidates[idx] = cell.variants();
+        for slot in sudoku.slots() {
+            let slot = slot.borrow();
+            let idx = slot.id() - 1;
+            values[idx] = slot.get_value();
+            candidates[idx] = slot.variants();
         }
 
         let peers = Self::compute_peers::<S>();
@@ -31,19 +31,19 @@ impl BacktrackState {
             values,
             candidates,
             peers,
-            total_cells,
+            total_slots,
         }
     }
 
     fn compute_peers<S: SudokuConfig>() -> Vec<Vec<usize>> {
-        let total_cells = S::total_number_of_cells();
+        let total_slots = S::total_number_of_slots();
         let num_rows = S::NUMBER_OF_ROWS;
         let num_cols = S::NUMBER_OF_COLS;
         let area_rows = S::NUMBER_OF_ROWS_IN_AREA;
         let area_cols = S::NUMBER_OF_COLS_IN_AREA;
 
-        // For each cell, precompute its unique peers (row+col+area)
-        (0..total_cells)
+        // For each slot, precompute its unique peers (row+col+area).
+        (0..total_slots)
             .map(|i| {
                 let row = i / num_cols;
                 let col = i % num_cols;
@@ -77,19 +77,19 @@ impl BacktrackState {
 
     fn apply_solution<S: SimpleSudoku>(&self, sudoku: &mut S) {
         // Write a solution back into your Rc<RefCell<>> graph
-        for cell in sudoku.cells() {
-            let mut cell = cell.borrow_mut();
-            let idx = cell.id() - 1;
+        for slot in sudoku.slots() {
+            let mut slot = slot.borrow_mut();
+            let idx = slot.id() - 1;
             if let Some(val) = self.values[idx] {
-                cell.set_value(Some(val));
+                slot.set_value(Some(val));
             }
         }
     }
 }
 
 fn solve(state: &mut BacktrackState, depth: usize) -> bool {
-    // Find the unsolved cell with the fewest candidates (MRV heuristic)
-    let Some(idx) = (0..state.total_cells)
+    // Find the unsolved slot with the fewest candidates (MRV heuristic).
+    let Some(idx) = (0..state.total_slots)
         .filter(|&i| state.values[i].is_none())
         .min_by_key(|&i| state.candidates[i].len())
     else {
@@ -97,10 +97,10 @@ fn solve(state: &mut BacktrackState, depth: usize) -> bool {
         return true;
     };
 
-    // If a cell has no candidates, this branch is invalid
+    // If a slot has no candidates, this branch is invalid
     if state.candidates[idx].is_empty() {
         debug!(
-            "BacktrackingStrategy: No candidates for cell {} at depth {}.",
+            "BacktrackingStrategy: No candidates for slot {} at depth {}.",
             idx + 1,
             depth
         );
@@ -109,7 +109,7 @@ fn solve(state: &mut BacktrackState, depth: usize) -> bool {
 
     let candidates: Vec<u8> = state.candidates[idx].iter().copied().collect();
     trace!(
-        "BacktrackingStrategy: Trying cell {} (depth {}) with {} candidates: {:?}.",
+        "BacktrackingStrategy: Trying slot {} (depth {}) with {} candidates: {:?}.",
         idx + 1,
         depth,
         candidates.len(),
@@ -117,7 +117,7 @@ fn solve(state: &mut BacktrackState, depth: usize) -> bool {
     );
 
     for candidate in candidates {
-        // Save the current cell's candidates and all affected peers
+        // Save the current slot's candidates and all affected peers
         let saved_current = state.candidates[idx].clone();
         let saved_peers: Vec<(usize, HashSet<u8>)> = state.peers[idx]
             .iter()
@@ -137,7 +137,7 @@ fn solve(state: &mut BacktrackState, depth: usize) -> bool {
                 if state.candidates[peer].is_empty() {
                     valid = false;
                     debug!(
-                        "BacktrackingStrategy: Candidate {} for cell {} conflicts with peer {}.",
+                        "BacktrackingStrategy: Candidate {} for slot {} conflicts with peer {}.",
                         candidate,
                         idx + 1,
                         peer + 1
@@ -153,12 +153,12 @@ fn solve(state: &mut BacktrackState, depth: usize) -> bool {
         }
 
         debug!(
-            "BacktrackingStrategy: Candidate {} for cell {} failed, backtracking.",
+            "BacktrackingStrategy: Candidate {} for slot {} failed, backtracking.",
             candidate,
             idx + 1
         );
 
-        // Undo: restore the current cell and all peers
+        // Undo: restore the current slot and all peers.
         state.values[idx] = None;
         state.candidates[idx] = saved_current;
         for (peer, saved_candidates) in saved_peers {
@@ -173,12 +173,12 @@ impl<S: SimpleSudoku> Strategy<S> for BacktrackingStrategy {
     fn run(&self, sudoku: &mut S) {
         info!("BacktrackingStrategy: started.");
         let unsolved_count = sudoku
-            .cells()
+            .slots()
             .iter()
             .filter(|c| c.borrow().get_value().is_none())
             .count();
         debug!(
-            "BacktrackingStrategy: {} unsolved cells remaining.",
+            "BacktrackingStrategy: {} unsolved slots remaining.",
             unsolved_count
         );
 

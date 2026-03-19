@@ -1,8 +1,8 @@
 use crate::objects::area::Area;
-use crate::objects::cell::Cell;
 use crate::objects::line::Line;
+use crate::objects::slot::Slot;
 use crate::traits::{
-    HasAreas, HasCells, HasColumns, HasRows, SimpleSudoku, Solvable, SolveMetrics, SudokuConfig,
+    HasAreas, HasColumns, HasRows, HasSlots, SimpleSudoku, Solvable, SolveMetrics, SudokuConfig,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -12,7 +12,7 @@ use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct Sudoku9x9 {
-    cells: Vec<Rc<RefCell<Cell>>>,
+    slots: Vec<Rc<RefCell<Slot>>>,
     rows: Vec<Rc<RefCell<Line>>>,
     columns: Vec<Rc<RefCell<Line>>>,
     areas: Vec<Rc<RefCell<Area>>>,
@@ -42,9 +42,9 @@ impl HasColumns for Sudoku9x9 {
     }
 }
 
-impl HasCells for Sudoku9x9 {
-    fn cells(&self) -> &Vec<Rc<RefCell<Cell>>> {
-        &self.cells
+impl HasSlots for Sudoku9x9 {
+    fn slots(&self) -> &Vec<Rc<RefCell<Slot>>> {
+        &self.slots
     }
 }
 
@@ -54,13 +54,13 @@ impl SolveMetrics for Sudoku9x9 {}
 
 impl SimpleSudoku for Sudoku9x9 {
     fn create_sudoku(
-        cells: Vec<Rc<RefCell<Cell>>>,
+        slots: Vec<Rc<RefCell<Slot>>>,
         rows: Vec<Rc<RefCell<Line>>>,
         columns: Vec<Rc<RefCell<Line>>>,
         areas: Vec<Rc<RefCell<Area>>>,
     ) -> Self {
         Self {
-            cells,
+            slots,
             rows,
             columns,
             areas,
@@ -70,7 +70,7 @@ impl SimpleSudoku for Sudoku9x9 {
 
 impl PartialEq<Self> for Sudoku9x9 {
     fn eq(&self, other: &Self) -> bool {
-        self.cells() == other.cells()
+        self.slots() == other.slots()
     }
 }
 
@@ -90,8 +90,8 @@ impl Display for Sudoku9x9 {
                 }
 
                 let idx = row * 9 + col;
-                let cell = self.cells[idx].borrow();
-                match cell.get_value() {
+                let slot = self.slots[idx].borrow();
+                match slot.get_value() {
                     Some(val) => write!(f, "{} ", val)?,
                     None => write!(f, "* ")?,
                 }
@@ -157,9 +157,9 @@ impl FromStr for Sudoku9x9 {
         };
 
         let total: usize = data.iter().map(|r| r.len()).sum();
-        if total != Self::total_number_of_cells() {
+        if total != Self::total_number_of_slots() {
             return Err(SudokuParseError::InvalidLength {
-                expected: Self::total_number_of_cells(),
+                expected: Self::total_number_of_slots(),
                 got: total,
             });
         }

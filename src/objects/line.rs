@@ -1,6 +1,6 @@
 use crate::helpers::has_duplicate_values;
-use crate::objects::cell::Cell;
-use crate::traits::{HasCells, Identifiable};
+use crate::objects::slot::Slot;
+use crate::traits::{HasSlots, Identifiable};
 use std::cell::RefCell;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
@@ -15,63 +15,63 @@ pub enum Alignment {
 pub struct Line {
     id: usize,
     alignment: Alignment,
-    cells: Vec<Rc<RefCell<Cell>>>,
+    slots: Vec<Rc<RefCell<Slot>>>,
 }
 
 impl Line {
-    pub fn new(id: usize, alignment: Alignment, cells: Vec<Rc<RefCell<Cell>>>) -> Self {
-        if has_duplicate_values(&cells) {
+    pub fn new(id: usize, alignment: Alignment, slots: Vec<Rc<RefCell<Slot>>>) -> Self {
+        if has_duplicate_values(&slots) {
             panic!("The line with id {id} has duplicates.");
         }
         Line {
             id,
             alignment,
-            cells,
+            slots,
         }
     }
 
     pub fn is_solved(&self) -> bool {
-        self.cells.iter().all(|cell| cell.borrow().is_solved())
+        self.slots.iter().all(|slot| slot.borrow().is_solved())
     }
 
-    pub fn solved_cells(&self) -> Vec<Rc<RefCell<Cell>>> {
-        self.cells
+    pub fn solved_slots(&self) -> Vec<Rc<RefCell<Slot>>> {
+        self.slots
             .iter()
-            .filter(|cell| cell.borrow().is_solved())
+            .filter(|slot| slot.borrow().is_solved())
             .cloned()
             .collect()
     }
 
-    pub fn unsolved_cells(&self) -> Vec<Rc<RefCell<Cell>>> {
-        self.cells
+    pub fn unsolved_slots(&self) -> Vec<Rc<RefCell<Slot>>> {
+        self.slots
             .iter()
-            .filter(|cell| !cell.borrow().is_solved())
+            .filter(|slot| !slot.borrow().is_solved())
             .cloned()
             .collect()
     }
 
     /// Get all solved values in this line
     pub fn solved_values(&self) -> Vec<u8> {
-        self.cells
+        self.slots
             .iter()
-            .filter_map(|cell| cell.borrow().get_value())
+            .filter_map(|slot| slot.borrow().get_value())
             .collect()
     }
 
     /// Check if a value exists in this line
     pub fn has_value(&self, value: u8) -> bool {
-        self.cells
+        self.slots
             .iter()
-            .any(|cell| cell.borrow().get_value() == Some(value))
+            .any(|slot| slot.borrow().get_value() == Some(value))
     }
 
-    /// Get cells that can have this value (unsolved cells with this candidate)
-    pub fn cells_with_candidate(&self, value: u8) -> Vec<Rc<RefCell<Cell>>> {
-        self.cells
+    /// Get slots that can have this value (unsolved slots with this candidate)
+    pub fn slots_with_candidate(&self, value: u8) -> Vec<Rc<RefCell<Slot>>> {
+        self.slots
             .iter()
-            .filter(|cell| {
-                let cell_ref = cell.borrow();
-                !cell_ref.is_solved() && cell_ref.has_candidate(value)
+            .filter(|slot| {
+                let slot_ref = slot.borrow();
+                !slot_ref.is_solved() && slot_ref.has_candidate(value)
             })
             .cloned()
             .collect()
@@ -84,27 +84,27 @@ impl Display for Line {
             Alignment::Row => "Row",
             Alignment::Column => "Col",
         };
-        // Get Cells values or "*".
-        let cells_values: Vec<String> = self
-            .cells
+        // Get Slots values or "*".
+        let slots_values: Vec<String> = self
+            .slots
             .iter()
-            .map(|cell| match cell.borrow().get_value() {
+            .map(|slot| match slot.borrow().get_value() {
                 Some(val) => val.to_string(),
                 None => "*".to_string(),
             })
             .collect();
-        write!(f, "{}-{} [{}]", line_type, self.id, cells_values.join(" "))
+        write!(f, "{}-{} [{}]", line_type, self.id, slots_values.join(" "))
     }
 }
 
 impl Debug for Line {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let cells_ids: Vec<String> = self
-            .cells()
+        let slots_ids: Vec<String> = self
+            .slots()
             .iter()
-            .map(|cell| cell.borrow().id().to_string())
+            .map(|slot| slot.borrow().id().to_string())
             .collect();
-        let ids_str = cells_ids.join(", ");
+        let ids_str = slots_ids.join(", ");
         write!(f, "{} [{}]", self.id(), ids_str)
     }
 }
@@ -115,9 +115,9 @@ impl Identifiable for Line {
     }
 }
 
-impl HasCells for Line {
-    fn cells(&self) -> &Vec<Rc<RefCell<Cell>>> {
-        &self.cells
+impl HasSlots for Line {
+    fn slots(&self) -> &Vec<Rc<RefCell<Slot>>> {
+        &self.slots
     }
 }
 
@@ -127,14 +127,14 @@ mod tests {
 
     #[test]
     fn test_is_solved_true() {
-        let mut cells = Vec::with_capacity(9);
+        let mut slots = Vec::with_capacity(9);
         for val in 1..=9 {
-            cells.push(Rc::new(RefCell::new(Cell::new(val, Some(val as u8)))))
+            slots.push(Rc::new(RefCell::new(Slot::new(val, Some(val as u8)))))
         }
         let line = Line {
             id: 1,
             alignment: Alignment::Row,
-            cells,
+            slots,
         };
         assert!(line.is_solved());
     }

@@ -52,22 +52,22 @@ fn apply_hidden_single_strategy<S: SimpleSudoku>(
             let ref_line = rc_refcell_of_line.borrow();
 
             for number in 1..=S::LENGTH as u8 {
-                // If value is already set, skip.
+                // If the value is already set, skip.
                 if ref_line.has_value(number) {
                     continue;
                 }
 
-                // Possible cells that can have this value.
-                let possible_cells = ref_line.cells_with_candidate(number);
+                // Possible slots that can have this value.
+                let possible_slots = ref_line.slots_with_candidate(number);
 
-                // Only one cell can have this value, so we can set it directly.
-                if possible_cells.len() == 1 {
-                    let mut cell = possible_cells[0].borrow_mut();
-                    if cell.set_value(Some(number)) {
+                // Only one slot can have this value, so we can set it directly.
+                if possible_slots.len() == 1 {
+                    let mut slot = possible_slots[0].borrow_mut();
+                    if slot.set_value(Some(number)) {
                         progress_made = true;
-                        debug!("{}: has solved the {:#}.", strategy, cell);
+                        debug!("{}: has solved the {:#}.", strategy, slot);
                     } else {
-                        debug!("{}: already solved {:#}.", strategy, cell);
+                        debug!("{}: already solved {:#}.", strategy, slot);
                     }
                 }
             }

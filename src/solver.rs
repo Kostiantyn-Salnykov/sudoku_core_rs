@@ -40,9 +40,9 @@ where
 
     pub fn solve(&mut self) {
         info!(
-            "Sudoku has {} of {} solved cells ({:.3}%).",
-            self.sudoku.count_solved_cells(),
-            self.sudoku.cells().len(),
+            "Sudoku has {} of {} solved slots ({:.3}%).",
+            self.sudoku.count_solved_slots(),
+            self.sudoku.slots().len(),
             self.sudoku.count_solved_percentage()
         );
         self.print_is_solved();
@@ -50,22 +50,22 @@ where
         info!("Solver started.");
         let start_ts = Utc::now();
         'main: loop {
-            let before_solved_count = self.sudoku.count_solved_cells();
+            let before_solved_count = self.sudoku.count_solved_slots();
 
             for strategy in &self.strategies {
-                let before_strategy = self.sudoku.count_solved_cells();
+                let before_strategy = self.sudoku.count_solved_slots();
                 strategy.run(self.sudoku);
 
                 if self.sudoku.is_solved() {
                     break 'main;
                 }
 
-                if self.sudoku.count_solved_cells() > before_strategy {
+                if self.sudoku.count_solved_slots() > before_strategy {
                     continue 'main;
                 }
             }
 
-            if self.sudoku.count_solved_cells() == before_solved_count {
+            if self.sudoku.count_solved_slots() == before_solved_count {
                 // No progress made with regular strategies
                 if !self.sudoku.is_solved()
                     && let Some(backtracking) = &self.backtracking_strategy
@@ -82,9 +82,9 @@ where
         let diff_micros = (end_ts - start_ts).num_microseconds().unwrap();
         info!("Time elapsed: {:?} us ({:?} ms).", diff_micros, diff_millis);
         info!(
-            "Sudoku has {} of {} solved cells ({:.3}%).",
-            self.sudoku.count_solved_cells(),
-            self.sudoku.cells().len(),
+            "Sudoku has {} of {} solved slots ({:.3}%).",
+            self.sudoku.count_solved_slots(),
+            self.sudoku.slots().len(),
             self.sudoku.count_solved_percentage()
         );
         self.print_is_solved();

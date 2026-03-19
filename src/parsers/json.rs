@@ -13,11 +13,11 @@ pub fn load_json(filename: &str) -> Vec<Vec<Option<u8>>> {
             row.as_array()
                 .expect("Expected array.")
                 .iter()
-                .map(|cell| {
-                    if cell.is_null() {
+                .map(|slot| {
+                    if slot.is_null() {
                         None
                     } else {
-                        Some(cell.as_u64().expect("Expected positive number.") as u8)
+                        Some(slot.as_u64().expect("Expected positive number.") as u8)
                     }
                 })
                 .collect()

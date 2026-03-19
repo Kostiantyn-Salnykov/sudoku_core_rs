@@ -1,14 +1,14 @@
 use crate::objects::area::Area;
 use crate::objects::line::Line;
 use crate::objects::traits::Candidate;
-use crate::traits::{HasCells, Identifiable};
+use crate::traits::{HasSlots, Identifiable};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::rc::{Rc, Weak};
 
 #[derive(Debug)]
-pub struct Cell {
+pub struct Slot {
     id: usize,
     value: Option<u8>,
     possible_variants: HashSet<u8>,
@@ -18,9 +18,9 @@ pub struct Cell {
     area: Weak<RefCell<Area>>,
 }
 
-impl Cell {
+impl Slot {
     pub fn new(id: usize, value: Option<u8>) -> Self {
-        let mut cell = Cell {
+        let mut slot = Slot {
             id,
             value: None,
             possible_variants: HashSet::new(),
@@ -29,8 +29,8 @@ impl Cell {
             column: Weak::new(),
             area: Weak::new(),
         };
-        cell.set_value(value);
-        cell
+        slot.set_value(value);
+        slot
     }
 
     pub fn set_value(&mut self, value: Option<u8>) -> bool {
@@ -86,7 +86,7 @@ impl Cell {
 
         assert!(
             !self.possible_variants.is_empty(),
-            "Cell {} has no candidates after exclude_values",
+            "Slot {} has no candidates after exclude_values",
             self.id
         );
 
@@ -133,29 +133,29 @@ impl Cell {
         self.area.clone()
     }
 
-    pub fn get_peers(&self) -> Vec<Rc<RefCell<Cell>>> {
+    pub fn get_peers(&self) -> Vec<Rc<RefCell<Slot>>> {
         let mut peer_ids = HashSet::new();
         let mut peers = Vec::new();
 
-        let mut add_peers = |cells: &[Rc<RefCell<Cell>>]| {
-            for cell in cells {
-                let cell_id = cell.borrow().id();
-                if cell_id != self.id && peer_ids.insert(cell_id) {
-                    peers.push(Rc::clone(cell));
+        let mut add_peers = |slots: &[Rc<RefCell<Slot>>]| {
+            for slot in slots {
+                let slot_id = slot.borrow().id();
+                if slot_id != self.id && peer_ids.insert(slot_id) {
+                    peers.push(Rc::clone(slot));
                 }
             }
         };
 
         if let Some(row) = self.row.upgrade() {
-            add_peers(row.borrow().cells());
+            add_peers(row.borrow().slots());
         }
 
         if let Some(col) = self.column.upgrade() {
-            add_peers(col.borrow().cells());
+            add_peers(col.borrow().slots());
         }
 
         if let Some(area) = self.area.upgrade() {
-            add_peers(area.borrow().cells());
+            add_peers(area.borrow().slots());
         }
 
         peers
@@ -164,11 +164,11 @@ impl Cell {
     pub fn get_solved_peers_values(&self) -> HashSet<u8> {
         let mut values = HashSet::new();
 
-        let mut collect_values = |cells: &[Rc<RefCell<Cell>>]| {
-            for cell in cells {
-                let cell_borrow = cell.borrow();
-                if cell_borrow.id() != self.id
-                    && let Some(val) = cell_borrow.get_value()
+        let mut collect_values = |slots: &[Rc<RefCell<Slot>>]| {
+            for slot in slots {
+                let slot_borrow = slot.borrow();
+                if slot_borrow.id() != self.id
+                    && let Some(val) = slot_borrow.get_value()
                 {
                     values.insert(val);
                 }
@@ -176,15 +176,15 @@ impl Cell {
         };
 
         if let Some(row) = self.row.upgrade() {
-            collect_values(row.borrow().cells());
+            collect_values(row.borrow().slots());
         }
 
         if let Some(col) = self.column.upgrade() {
-            collect_values(col.borrow().cells());
+            collect_values(col.borrow().slots());
         }
 
         if let Some(area) = self.area.upgrade() {
-            collect_values(area.borrow().cells());
+            collect_values(area.borrow().slots());
         }
 
         values
@@ -199,25 +199,25 @@ impl Cell {
     }
 }
 
-impl PartialEq<Self> for Cell {
+impl PartialEq<Self> for Slot {
     fn eq(&self, other: &Self) -> bool {
         self.get_value() == other.get_value()
     }
 }
 
-impl Identifiable for Cell {
+impl Identifiable for Slot {
     fn id(&self) -> usize {
         self.id
     }
 }
 
-impl Display for Cell {
-    // Implement "{}" formatting for Cell.
+impl Display for Slot {
+    // Implement "{}" formatting for Slot.
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             write!(
                 f,
-                "Cell {{id: {}, value: {}}}",
+                "Slot {{id: {}, value: {}}}",
                 self.id,
                 self.get_value().unwrap()
             )
@@ -237,29 +237,29 @@ mod tests {
     #[case::two(2)]
     #[case::three(81)]
     fn test_new_with_value(#[case] input: u8) {
-        let cell = Cell::new(1, Some(input));
+        let slot = Slot::new(1, Some(input));
 
-        assert_eq!(cell.id, 1);
-        assert_eq!(cell.value, Some(input));
-        assert!(cell.is_solved());
+        assert_eq!(slot.id, 1);
+        assert_eq!(slot.value, Some(input));
+        assert!(slot.is_solved());
     }
 
     #[test]
     fn test_new_without_value() {
-        let cell = Cell::new(1, None);
+        let slot = Slot::new(1, None);
 
-        assert_eq!(cell.id, 1);
-        assert_eq!(cell.value, None);
-        assert!(!cell.is_solved());
+        assert_eq!(slot.id, 1);
+        assert_eq!(slot.value, None);
+        assert!(!slot.is_solved());
     }
 
     #[test]
     fn test_get_value() {
         let fake_value = 2;
 
-        let cell = Cell::new(1, Some(fake_value));
+        let slot = Slot::new(1, Some(fake_value));
 
-        let val = cell.get_value();
+        let val = slot.get_value();
         assert_eq!(val, Some(fake_value));
     }
 }
